@@ -1,0 +1,27 @@
+# Build output
+build/
+*.o
+*.d
+*.a
+*.elf
+*.hex
+*.bin
+*.map
+
+# IDE generated files
+.project
+.cproject
+.settings/
+*.ioc
+*.mxproject
+
+# Backup files
+*~
+\#*\#
+*#
+
+# Log files
+*.log
+
+# Generated assembly listings
+*.lst
