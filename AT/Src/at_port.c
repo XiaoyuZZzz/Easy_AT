@@ -14,7 +14,7 @@
   * @brief 发送数据实现
   * @note  请根据实际使用的串口修改
   */
-void AT_Port_Send(const uint8_t *data, uint16_t len)
+void at_port_send(const uint8_t *data, uint16_t len)
 {
     /* 示例：使用 UART1 发送 */
     /* 请根据实际情况修改 UART 句柄 */
@@ -32,7 +32,7 @@ void AT_Port_Send(const uint8_t *data, uint16_t len)
 /**
   * @brief 获取系统 tick 实现
   */
-uint32_t AT_Port_GetTick(void)
+uint32_t at_port_get_tick(void)
 {
     return HAL_GetTick();
 }
@@ -43,7 +43,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == USART1) {
         // 将接收到的数据传递给 AT 库
-        // AT_ReceiveData(&rx_byte, 1);
+        // at_receive_data(&rx_byte, 1);
     }
 }
 */

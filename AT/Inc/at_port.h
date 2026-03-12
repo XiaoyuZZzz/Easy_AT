@@ -22,24 +22,24 @@ extern "C" {
   * @param  len: 数据长度
   * 
   * @note 示例实现（使用 UART）：
-  * void AT_Port_Send(const uint8_t *data, uint16_t len)
+  * void at_port_send(const uint8_t *data, uint16_t len)
   * {
   *     HAL_UART_Transmit(&huart1, data, len, 1000);
   * }
   */
-void AT_Port_Send(const uint8_t *data, uint16_t len);
+void at_port_send(const uint8_t *data, uint16_t len);
 
 /**
   * @brief 获取系统 tick（用户必须实现）
   * @retval 当前 tick 值（毫秒）
   * 
   * @note 示例实现：
-  * uint32_t AT_Port_GetTick(void)
+  * uint32_t at_port_get_tick(void)
   * {
   *     return HAL_GetTick();
   * }
   */
-uint32_t AT_Port_GetTick(void);
+uint32_t at_port_get_tick(void);
 
 #ifdef __cplusplus
 }

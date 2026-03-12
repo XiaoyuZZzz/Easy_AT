@@ -8,6 +8,7 @@
 #include "at_kernel.h"
 #include "at_port.h"
 #include <stdio.h>
+#include <string.h>
 
 /* Private defines -----------------------------------------------------------*/
 #define AT_RX_BUFFER_SIZE       256
@@ -20,7 +21,7 @@ typedef struct {
     uint16_t read_index;
     char response[AT_MAX_RESPONSE_LEN];
     uint16_t resp_index;
-} AT_RxBuffer_t;
+} AT_RX_BUFFER_T;
 
 /* Private variables ---------------------------------------------------------*/
 
@@ -29,36 +30,36 @@ extern uint32_t __start_at_cmd_table[];
 extern uint32_t __stop_at_cmd_table[];
 
 /* 运行时状态数组（在 RAM 中） */
-static AT_Cmd_Runtime_t g_runtime_states[64];  /* 最多支持 64 个命令 */
+static AT_CMD_RUNTIME_T g_runtime_states[64];  /* 最多支持 64 个命令 */
 
 /* 命令管理器 */
-static AT_Manager_t g_at_manager = {0};
+static AT_MANAGER_T g_at_manager = {0};
 
 /* 接收缓冲区 */
-static AT_RxBuffer_t g_rx_buffer = {0};
+static AT_RX_BUFFER_T g_rx_buffer = {0};
 
 /* 超时回调 */
 static void (*g_timeout_callback)(const char *cmd_name) = NULL;
 
 /* 当前正在执行的命令 */
-static const AT_Cmd_t *g_current_cmd = NULL;
+static const AT_CMD_T *g_current_cmd = NULL;
 
 /* Private function prototypes -----------------------------------------------*/
-static void AT_ParseResponse(void);
-static bool AT_CheckResponse(const char *response, const char *expected);
-static void AT_ExecuteNextCommand(void);
-static void AT_SendCommand(const AT_Cmd_t *cmd);
+static void at_parse_response(void);
+static bool at_check_response(const char *response, const char *expected);
+static void at_execute_next_command(void);
+static void at_send_command(const AT_CMD_T *cmd);
 
 /* Exported functions --------------------------------------------------------*/
 
 /**
   * @brief 初始化 AT 命令管理器
   */
-void AT_Init(void)
+void at_init(void)
 {
     /* 设置命令表起始和结束地址 */
-    g_at_manager.cmd_table = (const AT_Cmd_t *)__start_at_cmd_table;
-    g_at_manager.cmd_table_end = (const AT_Cmd_t *)__stop_at_cmd_table;
+    g_at_manager.cmd_table = (const AT_CMD_T *)__start_at_cmd_table;
+    g_at_manager.cmd_table_end = (const AT_CMD_T *)__stop_at_cmd_table;
     g_at_manager.cmd_count = (uint16_t)(g_at_manager.cmd_table_end - g_at_manager.cmd_table);
     g_at_manager.current_index = 0;
     g_at_manager.is_busy = false;
@@ -76,13 +77,13 @@ void AT_Init(void)
     memset(&g_rx_buffer, 0, sizeof(g_rx_buffer));
     
     printf("[AT] Initialized. Command table: %d commands\r\n", 
-           AT_GetCmdCount());
+           at_get_cmd_count());
 }
 
 /**
   * @brief 启动命令执行
   */
-void AT_Start(void)
+void at_start(void)
 {
     if (g_at_manager.is_busy) {
         return;
@@ -91,13 +92,13 @@ void AT_Start(void)
     g_at_manager.current_index = 0;
     g_at_manager.is_busy = true;
     
-    AT_ExecuteNextCommand();
+    at_execute_next_command();
 }
 
 /**
   * @brief 停止命令执行
   */
-void AT_Stop(void)
+void at_stop(void)
 {
     g_at_manager.is_busy = false;
     g_current_cmd = NULL;
@@ -106,7 +107,7 @@ void AT_Stop(void)
 /**
   * @brief AT 命令处理函数
   */
-void AT_Process(void)
+void at_process(void)
 {
     if (!g_at_manager.is_busy || g_current_cmd == NULL) {
         return;
@@ -118,14 +119,14 @@ void AT_Process(void)
         return;
     }
     
-    AT_Cmd_Runtime_t *runtime = &g_runtime_states[runtime_index];
+    AT_CMD_RUNTIME_T *runtime = &g_runtime_states[runtime_index];
     
     /* 检查超时 */
     if (runtime->start_tick == 0) {
-        runtime->start_tick = AT_Port_GetTick();
+        runtime->start_tick = at_port_get_tick();
     }
     
-    uint32_t current_tick = AT_Port_GetTick();
+    uint32_t current_tick = at_port_get_tick();
     if (current_tick - runtime->start_tick > g_current_cmd->timeout_ms) {
         printf("[AT] Timeout: %s\r\n", g_current_cmd->name);
         
@@ -135,18 +136,18 @@ void AT_Process(void)
         
         /* 切换到下一个命令 */
         runtime->state = AT_CMD_STATE_TIMEOUT;
-        AT_ExecuteNextCommand();
+        at_execute_next_command();
         return;
     }
     
     /* 解析接收到的响应 */
-    AT_ParseResponse();
+    at_parse_response();
 }
 
 /**
   * @brief 接收数据
   */
-void AT_ReceiveData(const uint8_t *data, uint16_t len)
+void at_receive_data(const uint8_t *data, uint16_t len)
 {
     for (uint16_t i = 0; i < len; i++) {
         g_rx_buffer.buffer[g_rx_buffer.write_index++] = data[i];
@@ -162,9 +163,9 @@ void AT_ReceiveData(const uint8_t *data, uint16_t len)
 /**
   * @brief 获取命令状态
   */
-AT_CmdState_t AT_GetCmdState(const char *cmd_name)
+AT_CMD_STATE_T at_get_cmd_state(const char *cmd_name)
 {
-    const AT_Cmd_t *cmd = g_at_manager.cmd_table;
+    const AT_CMD_T *cmd = g_at_manager.cmd_table;
     uint16_t index = 0;
     
     while (cmd < g_at_manager.cmd_table_end) {
@@ -181,7 +182,7 @@ AT_CmdState_t AT_GetCmdState(const char *cmd_name)
 /**
   * @brief 获取当前索引
   */
-uint16_t AT_GetCurrentIndex(void)
+uint16_t at_get_current_index(void)
 {
     return g_at_manager.current_index;
 }
@@ -189,15 +190,15 @@ uint16_t AT_GetCurrentIndex(void)
 /**
   * @brief 获取命令总数
   */
-uint16_t AT_GetCmdCount(void)
+uint16_t at_get_cmd_count(void)
 {
-    return (uint16_t)(g_at_manager.cmd_table_end - g_at_manager.cmd_table);
+    return g_at_manager.cmd_count;
 }
 
 /**
   * @brief 设置超时回调
   */
-void AT_SetTimeoutCallback(void (*cb)(const char *cmd_name))
+void at_set_timeout_callback(void (*cb)(const char *cmd_name))
 {
     g_timeout_callback = cb;
 }
@@ -207,7 +208,7 @@ void AT_SetTimeoutCallback(void (*cb)(const char *cmd_name))
 /**
   * @brief 解析响应
   */
-static void AT_ParseResponse(void)
+static void at_parse_response(void)
 {
     if (g_rx_buffer.read_index >= g_rx_buffer.write_index) {
         return;
@@ -219,7 +220,7 @@ static void AT_ParseResponse(void)
         return;
     }
     
-    AT_Cmd_Runtime_t *runtime = &g_runtime_states[runtime_index];
+    AT_CMD_RUNTIME_T *runtime = &g_runtime_states[runtime_index];
     
     /* 提取一行响应 */
     while (g_rx_buffer.read_index < g_rx_buffer.write_index) {
@@ -230,7 +231,7 @@ static void AT_ParseResponse(void)
             g_rx_buffer.resp_index = 0;
             
             /* 检查是否是期望的响应 */
-            if (AT_CheckResponse(g_rx_buffer.response, g_current_cmd->expected_response)) {
+            if (at_check_response(g_rx_buffer.response, g_current_cmd->expected_response)) {
                 printf("[AT] Matched: %s -> %s\r\n", 
                        g_current_cmd->name, 
                        g_current_cmd->expected_response);
@@ -247,7 +248,7 @@ static void AT_ParseResponse(void)
                 runtime->state = AT_CMD_STATE_COMPLETED;
                 
                 /* 切换到下一个命令 */
-                AT_ExecuteNextCommand();
+                at_execute_next_command();
             }
             
             g_rx_buffer.response[0] = '\0';
@@ -260,7 +261,7 @@ static void AT_ParseResponse(void)
 /**
   * @brief 检查响应是否匹配
   */
-static bool AT_CheckResponse(const char *response, const char *expected)
+static bool at_check_response(const char *response, const char *expected)
 {
     if (response == NULL || expected == NULL) {
         return false;
@@ -278,9 +279,9 @@ static bool AT_CheckResponse(const char *response, const char *expected)
 /**
   * @brief 执行下一个命令
   */
-static void AT_ExecuteNextCommand(void)
+static void at_execute_next_command(void)
 {
-    if (g_at_manager.current_index >= AT_GetCmdCount()) {
+    if (g_at_manager.current_index >= at_get_cmd_count()) {
         printf("[AT] All commands completed\r\n");
         g_at_manager.is_busy = false;
         g_current_cmd = NULL;
@@ -293,13 +294,13 @@ static void AT_ExecuteNextCommand(void)
            g_current_cmd->name, 
            g_current_cmd->cmd_string);
     
-    AT_SendCommand(g_current_cmd);
+    at_send_command(g_current_cmd);
 }
 
 /**
   * @brief 发送命令
   */
-static void AT_SendCommand(const AT_Cmd_t *cmd)
+static void at_send_command(const AT_CMD_T *cmd)
 {
     if (cmd == NULL) {
         return;
@@ -312,10 +313,10 @@ static void AT_SendCommand(const AT_Cmd_t *cmd)
     }
     
     /* 发送 AT 命令 */
-    AT_Port_Send((const uint8_t *)cmd->cmd_string, strlen(cmd->cmd_string));
+    at_port_send((const uint8_t *)cmd->cmd_string, strlen(cmd->cmd_string));
     
     /* 发送回车换行 */
-    AT_Port_Send((const uint8_t *)"\r\n", 2);
+    at_port_send((const uint8_t *)"\r\n", 2);
     
     /* 更新运行时状态 */
     g_runtime_states[runtime_index].state = AT_CMD_STATE_SENDING;

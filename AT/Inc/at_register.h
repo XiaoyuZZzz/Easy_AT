@@ -37,12 +37,12 @@
  * ----------------------------------------------------------------------------*/
 
 /* 声明回调函数 */
-void AT_Init_Callback(const char *response, void *user_data);
-void AT_Version_Callback(const char *response, void *user_data);
+void at_init_callback(const char *response, void *user_data);
+void at_version_callback(const char *response, void *user_data);
 
 /* 注册命令 */
-AT_CMD_REGISTER(INIT, "AT", "OK", AT_Init_Callback, 0, 1000);
-AT_CMD_REGISTER(CGMR, "AT+CGMR", "OK", AT_Version_Callback, 0, 1000);
+AT_CMD_REGISTER(INIT, "AT", "OK", at_init_callback, 0, 1000);
+AT_CMD_REGISTER(CGMR, "AT+CGMR", "OK", at_version_callback, 0, 1000);
 
 /* ----------------------------------------------------------------------------
  * 用户自定义命令注册区域
@@ -58,8 +58,8 @@ AT_CMD_REGISTER(CGMR, "AT+CGMR", "OK", AT_Version_Callback, 0, 1000);
  * ----------------------------------------------------------------------------*/
 
 /* 示例：用户自定义命令 */
-void User_Cmd_Callback(const char *response, void *user_data);
-AT_CMD_REGISTER(USER_CMD, "AT+USER", "OK", User_Cmd_Callback, 0, 1000);
+void user_cmd_callback(const char *response, void *user_data);
+AT_CMD_REGISTER(USER_CMD, "AT+USER", "OK", user_cmd_callback, 0, 1000);
 
 /* 在此添加更多命令... */
 
