@@ -192,7 +192,15 @@ SECTIONS
     . = ALIGN(8);
   } >RAM
 
-
+  /* AT command table section (stored in Flash) */
+  .at_cmd_table :
+  {
+    . = ALIGN(4);
+    __start_at_cmd_table = .;
+    KEEP(*(.at_cmd_table))
+    . = ALIGN(4);
+    __stop_at_cmd_table = .;
+  } >FLASH
 
   /* Remove information from the standard libraries */
   /DISCARD/ :
