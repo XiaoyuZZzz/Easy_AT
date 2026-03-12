@@ -31,6 +31,22 @@ typedef enum {
 } AT_CMD_STATE_T;
 
 /**
+  * @brief AT 命令类型
+  */
+typedef enum {
+    AT_CMD_TYPE_ONCE = 0,           /* 一次性命令（只执行一次） */
+    AT_CMD_TYPE_PERIODIC            /* 周期性命令（定时重复执行） */
+} AT_CMD_TYPE_T;
+
+/**
+  * @brief AT 命令阶段
+  */
+typedef enum {
+    AT_PHASE_INIT = 0,              /* 初始化阶段 */
+    AT_PHASE_LOOP                   /* 循环阶段 */
+} AT_PHASE_T;
+
+/**
   * @brief AT 命令结构体（存储在 Flash 中）
   */
 typedef struct {
@@ -40,6 +56,8 @@ typedef struct {
     void (*callback)(const char *response, void *user_data);  /* 回调函数（带响应数据） */
     void *user_data;                        /* 用户数据指针 */
     uint32_t timeout_ms;                    /* 超时时间（ms） */
+    AT_CMD_TYPE_T type;                     /* 命令类型 */
+    uint32_t interval_ms;                   /* 执行间隔（仅周期性命令有效） */
 } AT_CMD_T;
 
 /**
@@ -48,6 +66,8 @@ typedef struct {
 typedef struct {
     AT_CMD_STATE_T state;           /* 当前状态 */
     uint32_t start_tick;            /* 开始时间 */
+    uint32_t last_exec_tick;        /* 上次执行时间 */
+    bool executed;                  /* 是否已执行过 */
 } AT_CMD_RUNTIME_T;
 
 /**
@@ -61,6 +81,8 @@ typedef struct {
     uint16_t current_index;         /* 当前命令索引 */
     uint16_t cmd_count;             /* 命令总数 */
     bool is_busy;                   /* 忙标志 */
+    AT_PHASE_T current_phase;       /* 当前阶段 */
+    bool init_completed;            /* 初始化完成标志 */
 } AT_MANAGER_T;
 
 /* Exported macros -----------------------------------------------------------*/
@@ -73,9 +95,11 @@ typedef struct {
   * @param  cb: 回调函数
   * @param  user_data: 用户数据指针
   * @param  timeout: 超时时间（ms）
+  * @param  cmd_type: 命令类型（AT_CMD_TYPE_ONCE 或 AT_CMD_TYPE_PERIODIC）
+  * @param  interval: 执行间隔（ms，仅周期性命令有效）
   */
 #ifdef __GNUC__
-    #define AT_CMD_REGISTER(cmd_name, cmd_str, expected_resp, cb, user_data, timeout) \
+    #define AT_CMD_REGISTER(cmd_name, cmd_str, expected_resp, cb, user_data, timeout, cmd_type, interval) \
         __attribute__((used, section(".at_cmd_table"))) \
         const AT_CMD_T at_cmd_##cmd_name = { \
             #cmd_name, \
@@ -83,11 +107,25 @@ typedef struct {
             expected_resp, \
             cb, \
             (void*)(user_data), \
-            timeout \
+            timeout, \
+            cmd_type, \
+            interval \
         }
 #else
     #error "Only GCC is supported for AT command registration"
 #endif
+
+/**
+  * @brief 便捷宏：注册一次性命令
+  */
+#define AT_CMD_ONCE(cmd_name, cmd_str, expected_resp, cb, user_data, timeout) \
+    AT_CMD_REGISTER(cmd_name, cmd_str, expected_resp, cb, user_data, timeout, AT_CMD_TYPE_ONCE, 0)
+
+/**
+  * @brief 便捷宏：注册周期性命令
+  */
+#define AT_CMD_PERIODIC(cmd_name, cmd_str, expected_resp, cb, user_data, timeout, interval) \
+    AT_CMD_REGISTER(cmd_name, cmd_str, expected_resp, cb, user_data, timeout, AT_CMD_TYPE_PERIODIC, interval)
 
 /**
   * @brief X 宏定义（用于遍历命令表）
@@ -152,6 +190,18 @@ uint16_t at_get_cmd_count(void);
   * @param  cb: 超时回调函数
   */
 void at_set_timeout_callback(void (*cb)(const char *cmd_name));
+
+/**
+  * @brief 获取当前阶段
+  * @retval 当前阶段（AT_PHASE_INIT 或 AT_PHASE_LOOP）
+  */
+AT_PHASE_T at_get_current_phase(void);
+
+/**
+  * @brief 手动触发周期性命令立即执行
+  * @param  cmd_name: 命令名称
+  */
+void at_trigger_periodic_cmd(const char *cmd_name);
 
 /* 用户需要实现的移植层接口（在 at_port.h 中声明）---------------------------*/
 /*

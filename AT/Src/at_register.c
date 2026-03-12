@@ -37,19 +37,35 @@ void at_version_callback(const char *response, void *user_data)
     /* 版本查询完成的处理逻辑 */
     // response 包含完整的响应数据，例如："26-03-11"
     // 可以解析 response 获取版本号
+    printf("[AT] Version: %s\r\n", response);
 }
 
 /**
-  * @brief 用户自定义命令回调示例
+  * @brief 信号强度查询回调
+  * @param  response: 响应数据（如 "+CSQ: 25,99"）
+  * @param  user_data: 用户数据指针
+  */
+void at_csq_callback(const char *response, void *user_data)
+{
+    (void)user_data;
+    
+    /* 信号强度查询完成的处理逻辑 */
+    // response 包含信号强度信息
+    // 例如："+CSQ: 25,99"
+    // 可以解析 response 获取 RSSI 和 BER
+    printf("[AT] CSQ: %s\r\n", response);
+}
+
+/**
+  * @brief 基站信息查询回调
   * @param  response: 响应数据
   * @param  user_data: 用户数据指针
   */
-void user_cmd_callback(const char *response, void *user_data)
+void at_cell_callback(const char *response, void *user_data)
 {
-    (void)response;
     (void)user_data;
     
-    /* 用户自定义命令的处理逻辑 */
-    // 例如：切换 LED 状态
-    // HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
+    /* 基站信息查询完成的处理逻辑 */
+    // response 包含基站信息
+    printf("[AT] CELL: %s\r\n", response);
 }
