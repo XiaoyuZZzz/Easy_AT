@@ -180,7 +180,9 @@ $(BUILD_DIR)/%.o: %.S Makefile | $(BUILD_DIR)
 
 $(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile
 	$(CC) $(OBJECTS) $(LDFLAGS) -o $@
-	$(SZ) $@
+	@$(SZ) $@
+	@powershell -Command "$$o=&'$(SZ)' '$@'|Select-String '^\s*\d+';if($$o){$$p=$$o.ToString().Split([char[]]@(32,9),[System.StringSplitOptions]::RemoveEmptyEntries);$$t=[int]$$p[0];$$d=[int]$$p[1];$$b=[int]$$p[2];$$f=$$t+$$d;$$r=$$d+$$b;$$fp=[math]::Round($$f/655.36,2);$$rp=[math]::Round($$r/204.8,2);$$fb='';for($$i=0;$$i -lt 50;$$i++){$$fb+=if($$i -lt $$fp/2){'#'}else{'-'}};Write-Host ('Flash: ['+$$fb+'] '+$$f+' B / 64KB ('+$$fp+'%)') -ForegroundColor Cyan}"
+	@powershell -Command "$$o=&'$(SZ)' '$@'|Select-String '^\s*\d+';if($$o){$$p=$$o.ToString().Split([char[]]@(32,9),[System.StringSplitOptions]::RemoveEmptyEntries);$$t=[int]$$p[0];$$d=[int]$$p[1];$$b=[int]$$p[2];$$f=$$t+$$d;$$r=$$d+$$b;$$rp=[math]::Round($$r/204.8,2);$$rb='';for($$i=0;$$i -lt 50;$$i++){$$rb+=if($$i -lt $$rp/2){'#'}else{'-'}};Write-Host ('RAM:   ['+$$rb+'] '+$$r+' B / 20KB ('+$$rp+'%)') -ForegroundColor Green}"
 
 $(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 	$(HEX) $< $@
@@ -201,5 +203,16 @@ clean:
 # dependencies
 #######################################
 -include $(wildcard $(BUILD_DIR)/*.d)
+
+#######################################
+# memory usage
+#######################################
+memory:
+	@echo ""
+	@echo "========================================"
+	@echo "Memory Usage Report"
+	@echo "========================================"
+	@$(SZ) --format=berkeley $(BUILD_DIR)/$(TARGET).elf
+	@echo "========================================"
 
 # *** EOF ***
