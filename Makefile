@@ -195,7 +195,7 @@ $(BUILD_DIR):
 # clean up
 #######################################
 clean:
-	-rm -fR $(BUILD_DIR)
+	-cmd /c "if exist $(BUILD_DIR) rmdir /s /q $(BUILD_DIR)"
   
 #######################################
 # dependencies

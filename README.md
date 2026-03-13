@@ -83,15 +83,17 @@ uint32_t AT_Port_GetTick(void)
 #include "at_kernel.h"
 
 // 声明你的回调函数
-static void My_Cmd_Callback(void *user_data);
+static void My_Cmd_Callback(const char *response, void *user_data);
 
 // 注册命令
 // 参数：名称，AT 命令字符串，期望响应，回调函数，用户数据，超时时间 (ms)
-AT_CMD_REGISTER(MY_CMD, "AT+TEST", "OK", My_Cmd_Callback, NULL, 1000);
+AT_CMD_ONCE_OK_CB(MY_CMD, "AT+TEST", My_Cmd_Callback, NULL, 1000);
 
 // 回调函数实现
-static void My_Cmd_Callback(void *user_data)
+static void My_Cmd_Callback(const char *response, void *user_data)
 {
+    (void)response;
+    (void)user_data;
     // 命令执行成功的处理逻辑
 }
 
@@ -157,8 +159,16 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 ### 注册宏
 
 ```c
-AT_CMD_REGISTER(cmd_name, cmd_str, expected_resp, cb, user_data, timeout)
+AT_CMD_ONCE_OK(cmd_name, cmd_str, timeout)
+AT_CMD_ONCE_OK_CB(cmd_name, cmd_str, cb, user_data, timeout)
+AT_CMD_PERIODIC_OK(cmd_name, cmd_str, timeout, interval)
+AT_CMD_PERIODIC_OK_CB(cmd_name, cmd_str, cb, user_data, timeout, interval)
+AT_CMD_ONCE(cmd_name, cmd_str, expected_resp, cb, user_data, timeout)
+AT_CMD_PERIODIC(cmd_name, cmd_str, expected_resp, cb, user_data, timeout, interval)
 ```
+
+默认 `OK` 场景优先使用 `AT_CMD_ONCE_OK*` / `AT_CMD_PERIODIC_OK*`。
+只有需要匹配特殊响应内容时，再使用 `AT_CMD_ONCE` / `AT_CMD_PERIODIC` 并显式填写 `expected_resp`。
 
 **参数说明：**
 
@@ -166,7 +176,7 @@ AT_CMD_REGISTER(cmd_name, cmd_str, expected_resp, cb, user_data, timeout)
 |------|------|------|
 | `cmd_name` | 命令名称（标识符，用于区分） | `WIFI_CONNECT` |
 | `cmd_str` | AT 命令字符串（实际发送） | `"AT+CWJAP=\"SSID\",\"PWD\""` |
-| `expected_resp` | 期望响应（收到此响应触发回调） | `"OK"` |
+| `expected_resp` | 期望响应，用于判断命令成功；如果只是等待 `OK`，优先使用 `*_OK*` 宏 | `"OK"` / `"SEND OK"` |
 | `cb` | 回调函数指针 | `My_Callback` |
 | `user_data` | 用户数据指针（传递给回调） | `NULL` 或 `(void*)0x1234` |
 | `timeout` | 超时时间（毫秒） | `1000` |
@@ -188,10 +198,12 @@ void AT_SetTimeoutCallback(void (*cb)(const char*)); // 设置超时回调
 
 ```c
 // 注册一个简单的测试命令
-AT_CMD_REGISTER(TEST, "AT", "OK", Test_Callback, NULL, 1000);
+AT_CMD_ONCE_OK_CB(TEST, "AT", Test_Callback, NULL, 1000);
 
-static void Test_Callback(void *user_data)
+static void Test_Callback(const char *response, void *user_data)
 {
+    (void)response;
+    (void)user_data;
     // AT 命令测试成功
 }
 ```
@@ -199,15 +211,17 @@ static void Test_Callback(void *user_data)
 ### 示例 2：WiFi 连接
 
 ```c
-AT_CMD_REGISTER(WIFI_CONNECT, 
+AT_CMD_ONCE(WIFI_CONNECT, 
                 "AT+CWJAP=\"MyWiFi\",\"Password123\"", 
                 "WIFI GOT IP", 
                 WiFi_Connect_Callback, 
                 NULL, 
                 10000);  // 10 秒超时
 
-static void WiFi_Connect_Callback(void *user_data)
+static void WiFi_Connect_Callback(const char *response, void *user_data)
 {
+    (void)response;
+    (void)user_data;
     // WiFi 连接成功，可以点亮指示灯
     HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 }
@@ -216,15 +230,17 @@ static void WiFi_Connect_Callback(void *user_data)
 ### 示例 3：发送数据
 
 ```c
-AT_CMD_REGISTER(SEND_DATA, 
+AT_CMD_ONCE(SEND_DATA, 
                 "AT+CIPSEND", 
                 "SEND OK", 
                 Send_Callback, 
                 NULL, 
                 2000);
 
-static void Send_Callback(void *user_data)
+static void Send_Callback(const char *response, void *user_data)
 {
+    (void)response;
+    (void)user_data;
     // 数据发送成功
 }
 ```
@@ -233,15 +249,15 @@ static void Send_Callback(void *user_data)
 
 ```c
 // 传递参数给回调函数
-AT_CMD_REGISTER(CUSTOM, 
+AT_CMD_ONCE_OK_CB(CUSTOM, 
                 "AT+CUSTOM=123", 
-                "OK", 
                 Custom_Callback, 
                 (void*)0x1234,  // 用户数据指针
                 1000);
 
-static void Custom_Callback(void *user_data)
+static void Custom_Callback(const char *response, void *user_data)
 {
+    (void)response;
     uint32_t param = (uint32_t)user_data;
     // 使用 param = 0x1234
 }
@@ -251,12 +267,12 @@ static void Custom_Callback(void *user_data)
 
 ```c
 #ifdef USE_WIFI_MODULE
-    AT_CMD_REGISTER(WIFI_INIT, "AT+GMR", "OK", WiFi_Init_Callback, NULL, 1000);
-    AT_CMD_REGISTER(WIFI_CONNECT, "AT+CWJAP=\"SSID\",\"PWD\"", "OK", WiFi_Connect_Callback, NULL, 5000);
+    AT_CMD_ONCE_OK_CB(WIFI_INIT, "AT+GMR", WiFi_Init_Callback, NULL, 1000);
+    AT_CMD_ONCE_OK_CB(WIFI_CONNECT, "AT+CWJAP=\"SSID\",\"PWD\"", WiFi_Connect_Callback, NULL, 5000);
 #endif
 
 #ifdef USE_BLE_MODULE
-    AT_CMD_REGISTER(BLE_INIT, "AT+BLEINIT=1", "OK", BLE_Init_Callback, NULL, 1000);
+    AT_CMD_ONCE_OK_CB(BLE_INIT, "AT+BLEINIT=1", BLE_Init_Callback, NULL, 1000);
 #endif
 ```
 

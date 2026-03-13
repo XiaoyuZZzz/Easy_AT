@@ -22,7 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "at_kernel.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -87,7 +87,8 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
-
+  at_init();
+  at_start();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -97,8 +98,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
-    HAL_Delay(500);
+    at_process();
+    HAL_Delay(10);
   }
   /* USER CODE END 3 */
 }

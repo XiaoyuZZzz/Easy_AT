@@ -41,6 +41,8 @@ void at_port_send(const uint8_t *data, uint16_t len);
   */
 uint32_t at_port_get_tick(void);
 
+void at_port_poll(void);
+
 #ifdef __cplusplus
 }
 #endif

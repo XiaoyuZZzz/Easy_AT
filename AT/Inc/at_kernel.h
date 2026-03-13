@@ -131,6 +131,18 @@ typedef struct {
   * @brief X 宏定义（用于遍历命令表）
   * @note  用户可以在自己的文件中重新定义 AT_CMD_X 宏来使用命令表
   */
+#define AT_CMD_ONCE_OK(cmd_name, cmd_str, timeout) \
+    AT_CMD_ONCE(cmd_name, cmd_str, "OK", NULL, NULL, timeout)
+
+#define AT_CMD_ONCE_OK_CB(cmd_name, cmd_str, cb, user_data, timeout) \
+    AT_CMD_ONCE(cmd_name, cmd_str, "OK", cb, user_data, timeout)
+
+#define AT_CMD_PERIODIC_OK(cmd_name, cmd_str, timeout, interval) \
+    AT_CMD_PERIODIC(cmd_name, cmd_str, "OK", NULL, NULL, timeout, interval)
+
+#define AT_CMD_PERIODIC_OK_CB(cmd_name, cmd_str, cb, user_data, timeout, interval) \
+    AT_CMD_PERIODIC(cmd_name, cmd_str, "OK", cb, user_data, timeout, interval)
+
 #define AT_CMD_TABLE_XMACRO() \
     AT_CMD_X(INIT, "AT_INIT", "READY", AT_Init_Callback, NULL, 1000) \
     AT_CMD_X(CGMR, "AT+CGMR", "OK", AT_Version_Callback, NULL, 1000) \
